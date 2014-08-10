@@ -2,12 +2,12 @@ package monocle.std
 
 import monocle.TestUtil._
 import monocle.function._
-import monocle.{OptionalLaws, TraversalLaws}
+import monocle.{LensLaws, OptionalLaws, TraversalLaws}
 import org.specs2.scalaz.Spec
 
 class MapSpec extends Spec {
 
-  checkAll("at Map", TraversalLaws(at[Map[Int, String], Int, String](2)))
+  checkAll("at Map", LensLaws(at[Map[Int, String], Int, String](2)))
 
   checkAll("index Map", OptionalLaws(index[Map[Int, String], Int, String](3)))
 

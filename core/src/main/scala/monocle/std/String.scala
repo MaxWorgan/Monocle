@@ -16,24 +16,24 @@ trait StringInstances {
   implicit val stringReverse: Reverse[String, String] = Reverse.simple[String](_.reverse)
 
   implicit val stringEach: Each[String, Char] = new Each[String, Char] {
-    def each = stringToList composeTraversal Each.each[List[Char], Char]
+    def each = stringToList compose Each.each[List[Char], Char]
   }
 
   implicit val stringIndex: Index[String, Int, Char] = new Index[String, Int, Char]{
-    def index(i: Int) = stringToList composeOptional Index.index[List[Char], Int, Char](i)
+    def index(i: Int) = stringToList compose Index.index[List[Char], Int, Char](i)
   }
 
   implicit val stringFilterIndex: FilterIndex[String, Int, Char] = new FilterIndex[String, Int, Char]{
     def filterIndex(predicate: Int => Boolean) =
-      stringToList composeTraversal FilterIndex.filterIndex[List[Char], Int, Char](predicate)
+      stringToList compose FilterIndex.filterIndex[List[Char], Int, Char](predicate)
   }
 
   implicit val stringHeadOption: HeadOption[String, Char] = new HeadOption[String, Char] {
-    def headOption = stringToList composeOptional HeadOption.headOption[List[Char], Char]
+    def headOption = stringToList compose HeadOption.headOption[List[Char], Char]
   }
 
   implicit val stringTailOption: TailOption[String, String] = new TailOption[String, String]{
-    def tailOption = stringToList composeOptional TailOption.tailOption[List[Char], List[Char]] composeOptional stringToList.reverse
+    def tailOption = stringToList compose TailOption.tailOption[List[Char], List[Char]] compose stringToList.reverse
   }
 
   implicit val stringLastOption: LastOption[String, Char] =
@@ -52,11 +52,11 @@ trait StringInstances {
   }
 
   implicit val stringToInt = new SafeCast[String, Int] {
-    def safeCast = SafeCast.safeCast[String, Long] composePrism SafeCast.safeCast[Long, Int]
+    def safeCast = SafeCast.safeCast[String, Long] compose SafeCast.safeCast[Long, Int]
   }
 
   implicit val stringToByte = new SafeCast[String, Byte] {
-    def safeCast = SafeCast.safeCast[String, Long] composePrism SafeCast.safeCast[Long, Byte]
+    def safeCast = SafeCast.safeCast[String, Long] compose SafeCast.safeCast[Long, Byte]
   }
 
   private def parseLong(s: String): Option[Long] =

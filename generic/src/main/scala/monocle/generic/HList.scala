@@ -27,7 +27,7 @@ trait HListInstances {
 
   implicit def hListLast[S <: HList, RS <: HList, A](implicit evReverse: Reverse[S, RS],
                                                                  evHead: Head[RS, A]) = new Last[S, A] {
-    def last = evReverse.reverse composeLens evHead.head
+    def last = evReverse.reverse compose evHead.head
   }
 
   implicit def hListTail[S <: HList, H, T <: HList](implicit evIsCons: IsHCons.Aux[S, H, T],

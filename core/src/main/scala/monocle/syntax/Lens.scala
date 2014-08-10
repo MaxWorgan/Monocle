@@ -12,20 +12,20 @@ private[syntax] trait LensSyntax {
 }
 
 private[syntax] final class LensOps[S, T, A, B](self: Lens[S, T, A, B]) {
-  def |->[C, D](other: Lens[A, B, C, D]): Lens[S, T, C, D] = self composeLens other
+  def |->[C, D](other: Lens[A, B, C, D]): Lens[S, T, C, D] = self compose other
 }
 
 private[syntax] trait ApplyLens[S, T, A, B] extends ApplyOptional[S, T, A, B] with ApplyGetter[S, A] { self =>
   def _lens: Lens[S, T, A, B]
 
-  def _optional: Optional[S, T, A, B] = _lens
-  def _getter: Getter[S, A] = _lens
+  def _optional: Optional[S, T, A, B] = _lens.asOptional
+  def _getter: Getter[S, A] = _lens.asGetter
 
   def lift[F[_]: Functor](f: A => F[B]): F[T] = _lens.lift[F](from, f)
 
   def composeLens[C, D](other: Lens[A, B, C, D]): ApplyLens[S, T, C, D] = new ApplyLens[S, T, C, D] {
     val from: S = self.from
-    val _lens: Lens[S, T, C, D] = self._lens composeLens other
+    val _lens: Lens[S, T, C, D] = self._lens compose other
   }
 
   /** Alias to composeLens */

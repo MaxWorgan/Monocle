@@ -20,7 +20,7 @@ trait LastOptionFunctions {
   def lastOption[S, A](implicit ev: LastOption[S, A]): SimpleOptional[S, A] = ev.lastOption
 
   def reverseHeadLastOption[S, A](implicit evReverse: Reverse[S, S], evHead: HeadOption[S, A]) = new LastOption[S, A] {
-    def lastOption = evReverse.reverse composeOptional evHead.headOption
+    def lastOption = evReverse.reverse compose evHead.headOption
   }
 
 }

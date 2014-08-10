@@ -13,7 +13,7 @@ trait LongInstances {
   implicit val longToByte: SafeCast[Long, Byte] = SafeCast.orderingBoundedSafeCast(_.toLong, _.toByte)
 
   implicit val longToBoolean: SafeCast[Long, Boolean] = new SafeCast[Long, Boolean] {
-    def safeCast = SafeCast.safeCast[Long, Byte] composePrism SafeCast.safeCast[Byte, Boolean]
+    def safeCast = SafeCast.safeCast[Long, Byte] compose SafeCast.safeCast[Byte, Boolean]
   }
 
 }

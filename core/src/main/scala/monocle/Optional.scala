@@ -7,9 +7,17 @@ import scalaz.{Functor, Applicative}
  * a 0-1 Traversal. The latter constraint is not enforce at compile time
  * but by OptionalLaws
  */
-trait Optional[S, T, A, B] extends Traversal[S, T, A, B] { self =>
+abstract class Optional[S, T, A, B] private[monocle] { self =>
 
-  def getOption(from: S): Option[A] = headOption(from)
+  def multiLift[F[_]: Applicative](from: S, f: A => F[B]): F[T] // to define
+
+  lazy val asTraversal = new Traversal[S, T, A, B]{
+    def multiLift[F[_] : Applicative](from: S, f: A => F[B]): F[T] = multiLift(from, f)
+  }
+
+  def getOption(from: S): Option[A] = asTraversal.headOption(from)
+  def set(from: S, newValue: B): T  = asTraversal.set(from, newValue)
+  def modify(from: S, f: A => B): T = asTraversal.modify(from, f)
 
   def modifyOption(from: S, f: A => B): Option[T] = getOption(from).map(a => set(from, f(a)))
 
@@ -21,14 +29,17 @@ trait Optional[S, T, A, B] extends Traversal[S, T, A, B] { self =>
 
   def asOptional: Optional[S, T, A, B] = self
 
-  /** non overloaded compose function */
-  def composeOptional[C, D](other: Optional[A, B, C, D]): Optional[S, T, C, D] = new Optional[S, T, C, D] {
+  def compose[C, D](other: Optional[A, B, C, D]): Optional[S, T, C, D] = new Optional[S, T, C, D] {
     def multiLift[F[_] : Applicative](from: S, f: C => F[D]): F[T] = self.multiLift(from, other.multiLift(_, f))
   }
 
-  @deprecated("Use composeOptional", since = "0.5")
-  def compose[C, D](other: Optional[A, B, C, D]): Optional[S, T, C, D] = composeOptional(other)
+  def compose[C, D](other: Lens[A, B, C, D]) : Optional[S, T, C, D] = asOptional.compose(other.asOptional)
+  def compose[C, D](other: Prism[A, B, C, D]): Optional[S, T, C, D] = asOptional.compose(other.asOptional)
+  def compose[C, D](other: Iso[A, B, C, D])  : Optional[S, T, C, D] = compose(other.asPrism)
 
+  def compose[C, D](other: Traversal[A, B, C, D]): Traversal[S, T, C, D] = asTraversal compose other
+  def compose[C, D](other: Setter[A, B, C, D])   : Setter[S, T, C, D]    = asTraversal compose other
+  def compose(other: Fold[A, B])                 : Fold[S, B]            = asTraversal compose other
 }
 
 object Optional {

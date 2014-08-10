@@ -24,11 +24,11 @@ class ComposeIssueExample extends Spec {
   }
 
   "but composeTraversal does" in {
-    optLens.composeTraversal(some).getAll(example) shouldEqual List(2)
+    optLens.compose(some[Int, Int]).getOption(example) shouldEqual Some(2)
   }
 
   "also when type parameter is explicit" in {
-    (optLens.compose(some: SimplePrism[Option[Int], Int])).getAll(example) shouldEqual List(2)
+    (optLens.compose(some: SimplePrism[Option[Int], Int])).getOption(example) shouldEqual Some(2)
   }
 
   "compose and implicit do not work together" in {
@@ -38,7 +38,7 @@ class ComposeIssueExample extends Spec {
   }
 
   "but composeTraversal is fine" in {
-    optLens.composeTraversal(each).getAll(example) shouldEqual List(2)
+    optLens.compose(each[Option[Int], Int]).getAll(example) shouldEqual List(2)
   }
 
 
