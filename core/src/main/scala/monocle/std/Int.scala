@@ -12,7 +12,7 @@ trait IntInstances {
   implicit val intToByte: SafeCast[Int, Byte] = SafeCast.orderingBoundedSafeCast(_.toInt, _.toByte)
 
   implicit val intToBoolean: SafeCast[Int, Boolean] = new SafeCast[Int, Boolean] {
-    def safeCast = SafeCast.safeCast[Int, Byte] compose SafeCast.safeCast[Byte, Boolean]
+    def safeCast = SafeCast.safeCast[Int, Byte] composePrism SafeCast.safeCast[Byte, Boolean]
   }
 
 }

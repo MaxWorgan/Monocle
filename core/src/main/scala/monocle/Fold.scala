@@ -7,35 +7,41 @@ import scalaz.syntax.std.boolean._
 import scalaz.syntax.std.option._
 import scalaz.{ Foldable, Monoid, Tag }
 
-trait Fold[S, A] { self =>
+sealed abstract class Fold[S, A] private { self =>
 
-  def foldMap[B: Monoid](from: S)(f: A => B): B
+  def foldMap[B: Monoid](s: S)(f: A => B): B // to define
 
-  def fold(from: S)(implicit ev: Monoid[A]): A = foldMap(from)(identity)
 
-  def getAll(from: S): List[A] = foldMap(from)(List(_))
+  final def fold(from: S)(implicit ev: Monoid[A]): A = foldMap(from)(identity)
 
-  def headOption(from: S): Option[A] = Tag.unwrap(foldMap(from)(Option(_).first))
+  final def getAll(from: S): List[A] = foldMap(from)(List(_))
 
-  def exist(from: S)(p: A => Boolean): Boolean = Tag.unwrap(foldMap(from)(p(_).disjunction))
+  final def headOption(from: S): Option[A] = Tag.unwrap(foldMap(from)(Option(_).first))
 
-  def all(from: S)(p: A => Boolean): Boolean = Tag.unwrap(foldMap(from)(p(_).conjunction))
+  final def exist(from: S)(p: A => Boolean): Boolean = Tag.unwrap(foldMap(from)(p(_).disjunction))
 
-  def asFold: Fold[S, A] = self
+  final def all(from: S)(p: A => Boolean): Boolean = Tag.unwrap(foldMap(from)(p(_).conjunction))
 
-  /** non overloaded compose function */
-  def composeFold[B](other: Fold[A, B]): Fold[S, B] = new Fold[S, B] {
+  final def composeFold[B](other: Fold[A, B]): Fold[S, B] = new Fold[S, B] {
     def foldMap[C: Monoid](from: S)(f: B => C): C = self.foldMap(from)(other.foldMap(_)(f))
   }
 
-  @deprecated("Use composeFold", since = "0.5")
-  def compose[B](other: Fold[A, B]): Fold[S, B] = composeFold(other)
+  final def composeGetter[B](other: Getter[A, B])        : Fold[S, B] = composeFold(other.asFold)
+  final def composeLens[B, C, D](other: Lens[A, B, C, D]): Fold[S, C] = composeFold(other.asFold)
+  final def composeIso[B, C, D](other: Iso[A, B, C, D])  : Fold[S, C] = composeFold(other.asFold)
+
 }
 
 object Fold {
 
-  def apply[F[_]: Foldable, A]: Fold[F[A], A] = new Fold[F[A], A] {
-    def foldMap[B: Monoid](from: F[A])(f: A => B): B = Foldable[F].foldMap(from)(f)
+  def apply[S, A](_get: S => A): Fold[S, A] = new Fold[S, A]{
+    def foldMap[B: Monoid](s: S)(f: A => B): B = (f compose _get)(s)
   }
+
+  def apply[F[_]: Foldable, S, A](_getAll: S => F[A]): Fold[S, A] = new Fold[S, A]{
+    def foldMap[B: Monoid](s: S)(f: A => B): B = Foldable[F].foldMap(_getAll(s))(f)
+  }
+
+  def apply[F[_]: Foldable, A]: Fold[F[A], A] = apply[F, F[A], A](identity)
 
 }

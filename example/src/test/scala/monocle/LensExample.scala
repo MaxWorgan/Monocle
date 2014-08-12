@@ -55,10 +55,11 @@ class LensExample extends Spec {
   }
 
   "Modifications through lenses are chainable" in {
-    @Lenses case class Point(x: Int, y: Int)
-    import Point._
+    case class Point(x: Int, y: Int)
+    val lenser = Lenser[Point]
+    val (_x, _y) = (lenser(_.x), lenser(_y))
 
-    val update = x.modifyF(_ + 100) compose y.setF(7)
+    val update = _x.modifyF(_ + 100) compose _y.setF(7)
     update(Point(1,2)) shouldEqual Point(101,7)
   }
 

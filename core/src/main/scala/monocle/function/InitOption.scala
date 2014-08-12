@@ -22,7 +22,7 @@ trait InitOptionFunctions {
   def initOption[S, A](implicit ev: InitOption[S, A]): SimpleOptional[S, A] = ev.initOption
 
   def reverseTailInitOption[S](implicit evReverse: Reverse[S, S], evTail: TailOption[S, S]): InitOption[S, S] = new InitOption[S, S] {
-    def initOption = evReverse.reverse compose evTail.tailOption compose evReverse.reverse
+    def initOption = evReverse.reverse composeOptional evTail.tailOption composeIso evReverse.reverse
   }
 
 }

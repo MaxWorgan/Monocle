@@ -11,35 +11,38 @@ abstract class Optional[S, T, A, B] private[monocle] { self =>
 
   def multiLift[F[_]: Applicative](from: S, f: A => F[B]): F[T] // to define
 
-  lazy val asTraversal = new Traversal[S, T, A, B]{
-    def multiLift[F[_] : Applicative](from: S, f: A => F[B]): F[T] = multiLift(from, f)
-  }
+  final def getOption(from: S): Option[A] = asFold.headOption(from)
 
-  def getOption(from: S): Option[A] = asTraversal.headOption(from)
-  def set(from: S, newValue: B): T  = asTraversal.set(from, newValue)
-  def modify(from: S, f: A => B): T = asTraversal.modify(from, f)
-
-  def modifyOption(from: S, f: A => B): Option[T] = getOption(from).map(a => set(from, f(a)))
-
-  final def modifyOptionF(f: A => B): S => Option[T] = modifyOption(_, f)
-
-  def setOption(from: S, newValue: B): Option[T] = modifyOption(from, _ => newValue)
-
+  final def set(from: S, newValue: B): T  = asTraversal.set(from, newValue)
+  final def setF(b: B): S => T = asSetter.setF(b)
+  final def setOption(from: S, newValue: B): Option[T] = modifyOption(from, _ => newValue)
   final def setOptionF(newValue: B): S => Option[T] = setOption(_, newValue)
 
-  def asOptional: Optional[S, T, A, B] = self
+  final def modify(from: S, f: A => B): T = asTraversal.modify(from, f)
+  final def modifyF(f: A => B): S => T = asSetter.modifyF(f)
+  final def modifyOption(from: S, f: A => B): Option[T] = getOption(from).map(a => set(from, f(a)))
+  final def modifyOptionF(f: A => B): S => Option[T] = modifyOption(_, f)
 
-  def compose[C, D](other: Optional[A, B, C, D]): Optional[S, T, C, D] = new Optional[S, T, C, D] {
+
+  final lazy val asTraversal = new Traversal[S, T, A, B]{
+    def multiLift[F[_] : Applicative](from: S, f: A => F[B]): F[T] = multiLift(from, f)
+  }
+  final def asSetter    = asTraversal.asSetter
+  final def asFold      = asTraversal.asFold
+
+
+  final def composeTraversal[C, D](other: Traversal[A, B, C, D]): Traversal[S, T, C, D] = asTraversal composeTraversal other
+  final def composeSetter[C, D](other: Setter[A, B, C, D])      : Setter[S, T, C, D]    = asSetter    composeSetter    other
+  final def composeFold(other: Fold[A, B])                      : Fold[S, B]            = asFold      composeFold      other
+
+  final def composeOptional[C, D](other: Optional[A, B, C, D]): Optional[S, T, C, D] = new Optional[S, T, C, D] {
     def multiLift[F[_] : Applicative](from: S, f: C => F[D]): F[T] = self.multiLift(from, other.multiLift(_, f))
   }
 
-  def compose[C, D](other: Lens[A, B, C, D]) : Optional[S, T, C, D] = asOptional.compose(other.asOptional)
-  def compose[C, D](other: Prism[A, B, C, D]): Optional[S, T, C, D] = asOptional.compose(other.asOptional)
-  def compose[C, D](other: Iso[A, B, C, D])  : Optional[S, T, C, D] = compose(other.asPrism)
+  final def composeLens[C, D](other: Lens[A, B, C, D])  : Optional[S, T, C, D] = composeOptional(other.asOptional)
+  final def composePrism[C, D](other: Prism[A, B, C, D]): Optional[S, T, C, D] = composeOptional(other.asOptional)
+  final def composeIso[C, D](other: Iso[A, B, C, D])    : Optional[S, T, C, D] = composeOptional(other.asOptional)
 
-  def compose[C, D](other: Traversal[A, B, C, D]): Traversal[S, T, C, D] = asTraversal compose other
-  def compose[C, D](other: Setter[A, B, C, D])   : Setter[S, T, C, D]    = asTraversal compose other
-  def compose(other: Fold[A, B])                 : Fold[S, B]            = asTraversal compose other
 }
 
 object Optional {

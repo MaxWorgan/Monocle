@@ -1,33 +1,33 @@
 package monocle
 
-import scalaz.Functor
 
-trait Setter[S, T, A, B] { self =>
+final class Setter[S, T, A, B] private (_modifyF: (A => B) => S => T) {
 
-  def set(from: S, newValue: B): T = modify(from, _ => newValue)
+  def set(s: S, b: B): T = setF(b)(s)
+  def setF(b: B): S => T = modifyF(_ => b)
 
-  final def setF(newValue: B): S => T = set(_, newValue)
+  def modify(s: S, f: A => B): T = modifyF(f)(s)
+  def modifyF(f: A => B): S => T = _modifyF(f)
 
-  def modify(from: S, f: A => B): T
+  def composeSetter[C, D](other: Setter[A, B, C, D]): Setter[S, T, C, D] =
+    new Setter[S, T, C, D](_modifyF compose other.modifyF)
 
-  final def modifyF(f: A => B): S => T = modify(_, f)
-
-  def asSetter: Setter[S, T, A, B] = self
-
-  /** non overloaded compose function */
-  def composeSetter[C, D](other: Setter[A, B, C, D]): Setter[S, T, C, D] = new Setter[S, T, C, D] {
-    def modify(from: S, f: C => D): T = self.modify(from, other.modify(_, f))
-  }
-
-  @deprecated("Use composeSetter", since = "0.5")
-  def compose[C, D](other: Setter[A, B, C, D]): Setter[S, T, C, D] = composeSetter(other)
+  def composeTraversal[C, D](other: Traversal[A, B, C, D]): Setter[S, T, C, D] = composeSetter(other.asSetter)
+  def composeOptional[C, D](other: Optional[A, B, C, D])  : Setter[S, T, C, D] = composeSetter(other.asSetter)
+  def composePrism[C, D](other: Prism[A, B, C, D])        : Setter[S, T, C, D] = composeSetter(other.asSetter)
+  def composeLens[C, D](other: Lens[A, B, C, D])          : Setter[S, T, C, D] = composeSetter(other.asSetter)
+  def composeIso[C, D](other: Iso[A, B, C, D])            : Setter[S, T, C, D] = composeSetter(other.asSetter)
 
 }
 
 object Setter {
 
-  def apply[F[_]: Functor, A, B]: Setter[F[A], F[B], A, B] = new Setter[F[A], F[B], A, B] {
-    def modify(from: F[A], f: A => B): F[B] = Functor[F].map(from)(f)
-  }
+  import scalaz.Functor
+
+  def apply[S, T, A, B](_modifyF: (A => B) => S => T) =
+    new Setter[S, T, A, B](_modifyF)
+
+  def apply[F[_]: Functor, A, B]: Setter[F[A], F[B], A, B] =
+    new Setter[F[A], F[B], A, B](Functor[F].lift _)
 
 }

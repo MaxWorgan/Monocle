@@ -1,44 +1,45 @@
 package monocle.syntax
 
-import monocle.{Traversal, Optional}
+import monocle._
 
 object optional extends OptionalSyntax
 
 private[syntax] trait OptionalSyntax {
-  implicit def toOptionalOps[S, T, A, B](Optional: Optional[S, T, A, B]): OptionalOps[S, T, A, B] = new OptionalOps(Optional)
-
-  implicit def tolApplyOptionalOps[S](value: S): lyApplyOptionalOps[S] = new lyApplyOptionalOps(value)
+  implicit def tolApplyOptionalOps[S](value: S): ApplyOptionalOps[S] = new ApplyOptionalOps(value)
 }
 
-private[syntax] final class OptionalOps[S, T, A, B](val self: Optional[S, T, A, B]) {
-  def <-?[C, D](other: Optional[A, B, C, D]): Optional[S, T, C, D] = self compose other
+final case class ApplyOptionalOps[S](s: S) {
+  def applyOptional[T, A, B](optional: Optional[S, T, A, B]): ApplyOptional[S, T, A, B] =
+    new ApplyOptional[S, T, A, B](s, optional)
 }
 
-private[syntax] trait ApplyOptional[S, T, A, B] extends ApplyTraversal[S, T, A, B]  { self =>
-  def _optional: Optional[S, T, A, B]
+final case class ApplyOptional[S, T, A, B](s: S, optional: Optional[S, T, A, B]){
 
-  def _traversal: Traversal[S, T, A, B] = _optional.asTraversal
+  def getOption: Option[A] = optional.getOption(s)
 
-  def getOption: Option[A] = _optional.getOption(from)
+  def set(s: S, newValue: B): T  = optional.set(s, newValue)
+  def setF(b: B): S => T = optional.setF(b)
+  def setOption(s: S, newValue: B): Option[T] = optional.modifyOption(s, _ => newValue)
+  def setOptionF(newValue: B): S => Option[T] = optional.setOptionF(newValue)
 
-  def modifyOption(f: A => B): Option[T] = _optional.modifyOption(from, f)
+  def modify(s: S, f: A => B): T = optional.modify(s, f)
+  def modifyF(f: A => B): S => T = optional.modifyF(f)
+  def modifyOption(s: S, f: A => B): Option[T] = optional.modifyOption(s, f)
+  def modifyOptionF(f: A => B): S => Option[T] = optional.modifyOptionF(f)
 
-  def setOption(newValue: B): Option[T] = _optional.setOption(from, newValue)
+  def composeTraversal[C, D](other: Traversal[A, B, C, D]): ApplyTraversal[S, T, C, D] =
+    ApplyTraversal(s, optional composeTraversal other)
+  def composeSetter[C, D](other: Setter[A, B, C, D]): ApplySetter[S, T, C, D] =
+    ApplySetter(s, optional composeSetter other)
+  def composeFold(other: Fold[A, B]): ApplyFold[S, B] =
+    ApplyFold(s, optional composeFold other)
 
-  def composeOptional[C, D](other: Optional[A, B, C, D]): ApplyOptional[S, T, C, D] = new ApplyOptional[S, T, C, D] {
-    val _optional: Optional[S, T, C, D] = self._optional compose other
-    val from: S = self.from
-  }
+  def composeOptional[C, D](other: Optional[A, B, C, D]): ApplyOptional[S, T, C, D] =
+    new ApplyOptional[S, T, C, D](s, optional composeOptional other)
 
-  /** Alias to composeOptional */
-  def |-?[C, D](other: Optional[A, B, C, D]): ApplyOptional[S, T, C, D] = composeOptional(other)
+  def composeLens[C, D](other: Lens[A, B, C, D])  : ApplyOptional[S, T, C, D] = composeOptional(other.asOptional)
+  def composePrism[C, D](other: Prism[A, B, C, D]): ApplyOptional[S, T, C, D] = composeOptional(other.asOptional)
+  def composeIso[C, D](other: Iso[A, B, C, D])    : ApplyOptional[S, T, C, D] = composeOptional(other.asOptional)
+
 }
 
-private[syntax] final class lyApplyOptionalOps[S](value: S) {
-  def applyOptional[T, A, B](Optional: Optional[S, T, A, B]): ApplyOptional[S, T, A, B] = new ApplyOptional[S, T, A, B] {
-    val from: S = value
-    def _optional: Optional[S, T, A, B] = Optional
-  }
-
-  def |-?[T, A, B](Optional: Optional[S, T, A, B]): ApplyOptional[S, T, A, B] = applyOptional(Optional)
-}

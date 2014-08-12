@@ -1,15 +1,11 @@
 package monocle.function
 
 import monocle.{Optional, SimpleOptional}
-import monocle.function.Head._
-import monocle.syntax._
-import scalaz.IList._
-import scalaz.std.list._
-import scalaz.std.stream._
-import scalaz.std.vector._
-import scalaz.syntax.traverse._
-import scalaz.{OneAnd, Traverse, Applicative, IList}
+import monocle.std._
+
 import scala.annotation.implicitNotFound
+import scalaz.syntax.traverse._
+import scalaz.{Applicative, Traverse}
 
 @implicitNotFound("Could not find an instance of Index[${S},${I},${A}], please check Monocle instance location policy to " +
   "find out which import is necessary")
@@ -30,7 +26,7 @@ trait IndexFunctions {
   def index[S, I, A](i: I)(implicit ev: Index[S, I, A]): SimpleOptional[S, A] = ev.index(i)
 
   def atIndex[S, I, A](implicit ev: At[S, I, A]) = new Index[S, I, A] {
-    def index(i: I) = ev.at(i) compose monocle.std.option.some[A,A]
+    def index(i: I) = ev.at(i) composePrism some
   }
 
   def traverseIndex[S[_]: Traverse, A](zipWithIndex: S[A] => S[(A, Int)]): Index[S[A], Int, A] = new Index[S[A], Int, A]{

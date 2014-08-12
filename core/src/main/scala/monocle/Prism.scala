@@ -9,6 +9,24 @@ import scalaz.{Applicative, \/}
  */
 final class Prism[S, T, A, B] private[monocle] (_reverseGet: B => T, val seta: S => T \/ A) {
 
+  def re = Getter[B, T](_reverseGet)
+  def reverseGet(s: B): T = re.get(s)
+
+  def multiLift[F[_]: Applicative](s: S, f: A => F[B]): F[T] = asTraversal.multiLift(s, f)
+
+  def getOption(s: S): Option[A] = asOptional.getOption(s)
+
+  def set(s: S, b: B): T = asSetter.set(s, b)
+  def setF(b: B): S => T = asSetter.setF(b)
+  def setOption(from: S, newValue: B): Option[T] = asOptional.setOption(from, newValue)
+  def setOptionF(b: B): S => Option[T] = asOptional.setOptionF(b)
+
+  def modify(s: S, f: A => B): T = asSetter.modify(s, f)
+  def modifyF(f: A => B): S => T = asSetter.modifyF(f)
+  def modifyOption(from: S, f: A => B): Option[T] = asOptional.modifyOption(from, f)
+  def modifyOptionF(f: A => B): S => Option[T] = asOptional.modifyOptionF(f)
+
+
   lazy val asOptional = new Optional[S, T, A, B]{
     def multiLift[F[_]: Applicative](from: S, f: A => F[B]): F[T] =
       seta(from) // T \/ A
@@ -18,30 +36,23 @@ final class Prism[S, T, A, B] private[monocle] (_reverseGet: B => T, val seta: S
         .fold(identity, identity) // F[T]
   }
 
-  lazy val asTraversal = asOptional.asTraversal
+  def asTraversal = asOptional.asTraversal
+  def asSetter    = asOptional.asSetter
+  def asFold      = asOptional.asFold
 
-  def re = Getter[B, T](_reverseGet)
-  def reverseGet(from: B): T = re.get(from)
-
-  def multiLift[F[_]: Applicative](from: S, f: A => F[B]): F[T] = asOptional.multiLift(from, f)
-
-  def getOption(from: S): Option[A] = asOptional.getOption(from)
-  def set(from: S, newValue: B): T  = asOptional.set(from, newValue)
-  def modify(from: S, f: A => B): T = asOptional.modify(from, f)
-
-  def compose[C, D](other: Prism[A, B, C, D]): Prism[S, T, C, D] =
+  def composePrism[C, D](other: Prism[A, B, C, D]): Prism[S, T, C, D] =
     new Prism[S, T, C, D](
       reverseGet _ compose other.reverseGet,
       s => seta(s) flatMap( a => other.seta(a) leftMap _reverseGet )
     )
 
-  def compose[C, D](other: Iso[A, B, C, D]) : Prism[S, T, C, D]    = compose(other.asPrism)
-  def compose[C, D](other: Lens[A, B, C, D]): Optional[S, T, C, D] = asOptional.compose(other.asOptional)
+  def composeIso[C, D](other: Iso[A, B, C, D])            : Prism[S, T, C, D]     = composePrism(other.asPrism)
 
-  def compose[C, D](other: Optional[A, B, C, D]) : Optional[S, T, C, D]  = asOptional compose other
-  def compose[C, D](other: Traversal[A, B, C, D]): Traversal[S, T, C, D] = asOptional compose other
-  def compose[C, D](other: Setter[A, B, C, D])   : Setter[S, T, C, D]    = asOptional compose other
-  def compose(other: Fold[A, B])                 : Fold[S, B]            = asOptional compose other
+  def composeLens[C, D](other: Lens[A, B, C, D])          : Optional[S, T, C, D]  = asOptional  composeOptional  other.asOptional
+  def composeOptional[C, D](other: Optional[A, B, C, D])  : Optional[S, T, C, D]  = asOptional  composeOptional  other
+  def composeTraversal[C, D](other: Traversal[A, B, C, D]): Traversal[S, T, C, D] = asTraversal composeTraversal other
+  def composeSetter[C, D](other: Setter[A, B, C, D])      : Setter[S, T, C, D]    = asSetter    composeSetter    other
+  def composeFold(other: Fold[A, B])                      : Fold[S, B]            = asFold      composeFold      other
 
 }
 
